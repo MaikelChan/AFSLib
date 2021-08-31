@@ -3,18 +3,29 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>MaikelChan</Authors>
-    <Description>Library to manipulate AFS files.</Description>
+    <Description>AFSLib is a library that can extract, create and manipulate AFS files. The AFS format is used in many games from companies like Sega.</Description>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
     <Version>1.0.0</Version>
     <Company />
     <PackageProjectUrl>https://github.com/MaikelChan/AFSLib</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MaikelChan/AFSLib</RepositoryUrl>
+    <PackageTags>games, game, packer, unpacker, romhacking, rom, afs, afs-archive</PackageTags>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <PackageId>MaikelChan.AFSLib</PackageId>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\AFSPacker Git\AFSLib\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>
