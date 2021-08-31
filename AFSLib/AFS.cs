@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Reflection;
 using System.Text;
 
 namespace AFSLib
@@ -546,6 +547,11 @@ namespace AFSLib
             cleanedUpName = cleanedUpName.Replace(":", string.Empty);
 
             return cleanedUpName;
+        }
+
+        public static Version GetVersion()
+        {
+            return Assembly.GetExecutingAssembly().GetName().Version;
         }
     }
 }
