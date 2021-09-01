@@ -362,13 +362,18 @@ namespace AFSLib
         /// <summary>
         /// Adds a new entry from a file.
         /// </summary>
-        /// <param name="fileNamePath">Path to the file that will be added.</param>
         /// <param name="entryName">The name of the entry.</param>
-        public void AddEntryFromFile(string fileNamePath, string entryName)
+        /// <param name="fileNamePath">Path to the file that will be added.</param>
+        public void AddEntry(string entryName, string fileNamePath)
         {
-            if (string.IsNullOrEmpty(fileNamePath))
+            if (entryName == null)
             {
                 throw new ArgumentNullException(nameof(entryName));
+            }
+
+            if (string.IsNullOrEmpty(fileNamePath))
+            {
+                throw new ArgumentNullException(nameof(fileNamePath));
             }
 
             if (!File.Exists(fileNamePath))
@@ -376,12 +381,37 @@ namespace AFSLib
                 throw new FileNotFoundException($"File \"{fileNamePath}\" has not been found.", fileNamePath);
             }
 
+            entries.Add(new FileEntry(this, fileNamePath, entryName));
+            UpdateEntriesNames();
+        }
+
+        /// <summary>
+        /// Adds a new entry from a stream.
+        /// </summary>
+        /// <param name="entryName">The name of the entry.</param>
+        /// <param name="entryStream">Stream that contains the file that will be added.</param>
+        public void AddEntry(string entryName, Stream entryStream)
+        {
             if (entryName == null)
             {
                 throw new ArgumentNullException(nameof(entryName));
             }
 
-            entries.Add(new FileEntry(this, fileNamePath, entryName));
+            if (entryStream == null)
+            {
+                throw new ArgumentNullException(nameof(entryStream));
+            }
+
+            StreamEntryInfo info = new StreamEntryInfo()
+            {
+                Offset = 0,
+                Name = entryName,
+                Size = (uint)entryStream.Length,
+                LastWriteTime = DateTime.Now,
+                Unknown = (uint)entryStream.Length
+            };
+
+            entries.Add(new StreamEntry(this, entryStream, info));
             UpdateEntriesNames();
         }
 
