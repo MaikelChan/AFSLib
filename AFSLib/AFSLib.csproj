@@ -4,9 +4,9 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <Authors>MaikelChan</Authors>
     <Description>AFSLib is a library that can extract, create and manipulate AFS files. The AFS format is used in many games from companies like Sega.</Description>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
+    <Version>1.0.1</Version>
     <Company />
     <PackageProjectUrl>https://github.com/MaikelChan/AFSLib</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MaikelChan/AFSLib</RepositoryUrl>
@@ -14,6 +14,11 @@
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageId>MaikelChan.AFSLib</PackageId>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReleaseNotes>## [1.0.1] - 2021-09-01
+### Added
+- Be able to add an entry from a Stream to an AFS file.
+### Fixed
+- Fixed an exception message.</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
