@@ -357,6 +357,36 @@ namespace AFSLib
         }
 
         /// <summary>
+        /// Adds all files in the specified directory to the AFS object.
+        /// </summary>
+        /// <param name="directory">The path to the directory.</param>
+        /// <param name="recursiveSearch">When true, it adds all files in the specified directory and its subdirectories. When false, it ignores any subdirectories.</param>
+        public void AddEntriesFromDirectory(string directory, bool recursiveSearch)
+        {
+            CheckDisposed();
+
+            if (string.IsNullOrEmpty(directory))
+            {
+                throw new ArgumentNullException(nameof(directory));
+            }
+
+            if (!Directory.Exists(directory))
+            {
+                throw new DirectoryNotFoundException($"Directory \"{directory}\" has not been found.");
+            }
+
+            string[] files = Directory.GetFiles(directory, "*.*", recursiveSearch ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+
+            for (int f = 0; f < files.Length; f++)
+            {
+                string entryName = Path.GetFileName(files[f]);
+                entries.Add(new FileEntry(this, files[f], entryName));
+            }
+
+            UpdateEntriesNames();
+        }
+
+        /// <summary>
         /// Removes an entry from the AFS object.
         /// </summary>
         /// <param name="entry">The entry to remove.</param>
