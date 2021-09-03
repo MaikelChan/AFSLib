@@ -6,9 +6,10 @@ namespace AFSLib
 {
     internal static class Utils
     {
-        internal static uint Pad(uint value, uint padBytes)
+        internal static uint Pad(uint value, uint alignment)
         {
-            if ((value % padBytes) != 0) return value + (padBytes - (value % padBytes));
+            uint mod = value % alignment;
+            if (mod != 0) return value + (alignment - mod);
             else return value;
         }
 

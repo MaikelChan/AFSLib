@@ -25,6 +25,12 @@ namespace AFSLib
         public AttributesInfoType AttributesInfoType { get; set; }
 
         /// <summary>
+        /// The amount of bytes the entry block will be aligned to. Minimum accepted value is 2048, which is what most games use. But some games have bigger values.
+        /// </summary>
+        public uint EntryBlockAlignment { get => entryBlockAlignment; set => entryBlockAlignment = Math.Max(value, MIN_ENTRY_BLOCK_ALIGNMENT_SIZE); }
+        uint entryBlockAlignment;
+
+        /// <summary>
         /// The amount of entries in this AFS object.
         /// </summary>
         public uint EntryCount => (uint)entries.Count;
@@ -47,7 +53,8 @@ namespace AFSLib
         internal const uint ATTRIBUTE_INFO_SIZE = 0x8;
         internal const uint ATTRIBUTE_ELEMENT_SIZE = 0x30;
         internal const uint MAX_ENTRY_NAME_LENGTH = 0x20;
-        internal const uint PADDING_SIZE = 0x800;
+        internal const uint MIN_ENTRY_BLOCK_ALIGNMENT_SIZE = 0x800;
+        internal const uint ALIGNMENT_SIZE = 0x800;
 
         internal const string DUMMY_ENTRY_NAME_FOR_BLANK_RAW_NAME = "_NO_NAME";
 
@@ -76,6 +83,7 @@ namespace AFSLib
 
             HeaderMagicType = HeaderMagicType.AFS_00;
             AttributesInfoType = AttributesInfoType.InfoAtBeginning;
+            EntryBlockAlignment = 0x800;
         }
 
         /// <summary>
@@ -115,8 +123,8 @@ namespace AFSLib
                 uint entryCount = br.ReadUInt32();
                 StreamEntryInfo[] entriesInfo = new StreamEntryInfo[entryCount];
 
-                uint dataBlockStartOffset = 0;
-                uint dataBlockEndOffset = 0;
+                uint entryBlockStartOffset = 0;
+                uint entryBlockEndOffset = 0;
 
                 for (int e = 0; e < entryCount; e++)
                 {
@@ -128,10 +136,16 @@ namespace AFSLib
                         continue;
                     }
 
-                    if (dataBlockStartOffset == 0) dataBlockStartOffset = entriesInfo[e].Offset;
-                    dataBlockEndOffset = entriesInfo[e].Offset + entriesInfo[e].Size;
+                    if (entryBlockStartOffset == 0) entryBlockStartOffset = entriesInfo[e].Offset;
+                    entryBlockEndOffset = entriesInfo[e].Offset + entriesInfo[e].Size;
                 }
 
+                // Calculate the entry block alignment
+
+                uint alignment = MIN_ENTRY_BLOCK_ALIGNMENT_SIZE;
+                uint endInfoBlockOffset = (uint)afsStream.Position + ATTRIBUTE_INFO_SIZE;
+                while (endInfoBlockOffset + alignment < entryBlockStartOffset) alignment <<= 1;
+                EntryBlockAlignment = alignment;
                 // Find where attribute info is located
 
                 AttributesInfoType = AttributesInfoType.NoAttributes;
@@ -139,7 +153,7 @@ namespace AFSLib
                 uint attributeDataOffset = br.ReadUInt32();
                 uint attributeDataSize = br.ReadUInt32();
 
-                bool isAttributeInfoValid = IsAttributeInfoValid(attributeDataOffset, attributeDataSize, (uint)afsStream.Length, dataBlockEndOffset);
+                bool isAttributeInfoValid = IsAttributeInfoValid(attributeDataOffset, attributeDataSize, (uint)afsStream.Length, entryBlockEndOffset);
 
                 if (isAttributeInfoValid)
                 {
@@ -147,11 +161,11 @@ namespace AFSLib
                 }
                 else
                 {
-                    afsStream.Position = dataBlockStartOffset - ATTRIBUTE_INFO_SIZE;
+                    afsStream.Position = entryBlockStartOffset - ATTRIBUTE_INFO_SIZE;
                     attributeDataOffset = br.ReadUInt32();
                     attributeDataSize = br.ReadUInt32();
 
-                    isAttributeInfoValid = IsAttributeInfoValid(attributeDataOffset, attributeDataSize, (uint)afsStream.Length, dataBlockEndOffset);
+                    isAttributeInfoValid = IsAttributeInfoValid(attributeDataOffset, attributeDataSize, (uint)afsStream.Length, entryBlockEndOffset);
 
                     if (isAttributeInfoValid)
                     {
@@ -237,7 +251,7 @@ namespace AFSLib
 
                 uint[] offsets = new uint[EntryCount];
 
-                uint firstEntryOffset = Utils.Pad(HEADER_SIZE + (ENTRY_INFO_ELEMENT_SIZE * EntryCount) + ATTRIBUTE_INFO_SIZE, PADDING_SIZE);
+                uint firstEntryOffset = Utils.Pad(HEADER_SIZE + (ENTRY_INFO_ELEMENT_SIZE * EntryCount) + ATTRIBUTE_INFO_SIZE, EntryBlockAlignment);
                 uint currentEntryOffset = firstEntryOffset;
 
                 for (int e = 0; e < EntryCount; e++)
@@ -251,7 +265,7 @@ namespace AFSLib
                         offsets[e] = currentEntryOffset;
 
                         currentEntryOffset += entries[e].Size;
-                        currentEntryOffset = Utils.Pad(currentEntryOffset, PADDING_SIZE);
+                        currentEntryOffset = Utils.Pad(currentEntryOffset, ALIGNMENT_SIZE);
                     }
                 }
 
@@ -348,7 +362,7 @@ namespace AFSLib
                 // Pad final zeroes
 
                 uint currentPosition = (uint)outputStream.Position;
-                uint endOfFile = Utils.Pad(currentPosition, PADDING_SIZE);
+                uint endOfFile = Utils.Pad(currentPosition, ALIGNMENT_SIZE);
                 Utils.FillStreamWithZeroes(outputStream, endOfFile - currentPosition);
 
                 // Make sure the stream is the size of the AFS data (in case the stream was bigger)
