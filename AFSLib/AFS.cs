@@ -7,7 +7,7 @@ using System.Text;
 
 namespace AFSLib
 {
-    public class AFS
+    public class AFS : IDisposable
     {
         /// <summary>
         /// Each of the entries in the AFS object.
@@ -58,12 +58,16 @@ namespace AFSLib
 
         internal const string DUMMY_ENTRY_NAME_FOR_BLANK_RAW_NAME = "_NO_NAME";
 
-        private readonly Stream afsStream;
-
         private readonly List<Entry> entries;
         private readonly ReadOnlyCollection<Entry> readonlyEntries;
         private readonly Dictionary<string, uint> duplicates;
-        private readonly string[] invalidPathChars;
+
+        private static readonly string[] invalidPathChars;
+
+        private Stream afsStream;
+        private bool leaveAfsStreamOpen;
+
+        private bool isDisposed;
 
         /// <summary>
         /// Create an empty AFS object.
@@ -74,20 +78,18 @@ namespace AFSLib
             readonlyEntries = entries.AsReadOnly();
             duplicates = new Dictionary<string, uint>();
 
-            char[] chars = Path.GetInvalidPathChars();
-            invalidPathChars = new string[chars.Length];
-            for (int ipc = 0; ipc < chars.Length; ipc++)
-            {
-                invalidPathChars[ipc] = chars[ipc].ToString();
-            }
-
             HeaderMagicType = HeaderMagicType.AFS_00;
             AttributesInfoType = AttributesInfoType.InfoAtBeginning;
             EntryBlockAlignment = 0x800;
+
+            afsStream = null;
+            leaveAfsStreamOpen = true;
+
+            isDisposed = false;
         }
 
         /// <summary>
-        /// Create an AFS object out of an AFS stream.
+        /// Create an AFS object out of a stream. The stream will need to remain open until the AFS object is disposed, as it will need to access the stream's data during various operations.
         /// </summary>
         /// <param name="afsStream">Stream containing the AFS file data.</param>
         public AFS(Stream afsStream) : this()
@@ -97,129 +99,48 @@ namespace AFSLib
                 throw new ArgumentNullException(nameof(afsStream));
             }
 
-            this.afsStream = afsStream;
+            LoadFromStream(afsStream);
+            leaveAfsStreamOpen = true;
+        }
 
-            using (BinaryReader br = new BinaryReader(afsStream, Encoding.UTF8, true))
+        /// <summary>
+        /// Create an AFS object out of a file. The file will remain open until the AFS object is disposed.
+        /// </summary>
+        /// <param name="afsFilePath">Path to the AFS file containing the data.</param>
+        public AFS(string afsFilePath) : this()
+        {
+            if (string.IsNullOrEmpty(afsFilePath))
             {
-                // Check if the Magic is valid
-
-                uint magic = br.ReadUInt32();
-
-                if (magic == HEADER_MAGIC_00)
-                {
-                    HeaderMagicType = HeaderMagicType.AFS_00;
-                }
-                else if (magic == HEADER_MAGIC_20)
-                {
-                    HeaderMagicType = HeaderMagicType.AFS_20;
-                }
-                else
-                {
-                    throw new InvalidDataException("Stream doesn't seem to contain valid AFS data.");
-                }
-
-                // Start gathering info about entries and attributes
-
-                uint entryCount = br.ReadUInt32();
-                StreamEntryInfo[] entriesInfo = new StreamEntryInfo[entryCount];
-
-                uint entryBlockStartOffset = 0;
-                uint entryBlockEndOffset = 0;
-
-                for (int e = 0; e < entryCount; e++)
-                {
-                    entriesInfo[e].Offset = br.ReadUInt32();
-                    entriesInfo[e].Size = br.ReadUInt32();
-
-                    if (entriesInfo[e].IsNull)
-                    {
-                        continue;
-                    }
-
-                    if (entryBlockStartOffset == 0) entryBlockStartOffset = entriesInfo[e].Offset;
-                    entryBlockEndOffset = entriesInfo[e].Offset + entriesInfo[e].Size;
-                }
-
-                // Calculate the entry block alignment
-
-                uint alignment = MIN_ENTRY_BLOCK_ALIGNMENT_SIZE;
-                uint endInfoBlockOffset = (uint)afsStream.Position + ATTRIBUTE_INFO_SIZE;
-                while (endInfoBlockOffset + alignment < entryBlockStartOffset) alignment <<= 1;
-                EntryBlockAlignment = alignment;
-                // Find where attribute info is located
-
-                AttributesInfoType = AttributesInfoType.NoAttributes;
-
-                uint attributeDataOffset = br.ReadUInt32();
-                uint attributeDataSize = br.ReadUInt32();
-
-                bool isAttributeInfoValid = IsAttributeInfoValid(attributeDataOffset, attributeDataSize, (uint)afsStream.Length, entryBlockEndOffset);
-
-                if (isAttributeInfoValid)
-                {
-                    AttributesInfoType = AttributesInfoType.InfoAtBeginning;
-                }
-                else
-                {
-                    afsStream.Position = entryBlockStartOffset - ATTRIBUTE_INFO_SIZE;
-                    attributeDataOffset = br.ReadUInt32();
-                    attributeDataSize = br.ReadUInt32();
-
-                    isAttributeInfoValid = IsAttributeInfoValid(attributeDataOffset, attributeDataSize, (uint)afsStream.Length, entryBlockEndOffset);
-
-                    if (isAttributeInfoValid)
-                    {
-                        AttributesInfoType = AttributesInfoType.InfoAtEnd;
-                    }
-                }
-
-                // Read attribute data if there is any
-
-                if (ContainsAttributes)
-                {
-                    afsStream.Position = attributeDataOffset;
-
-                    for (int e = 0; e < entryCount; e++)
-                    {
-                        if (entriesInfo[e].IsNull)
-                        {
-                            // It's a null entry, so ignore attribute data
-
-                            afsStream.Position += ATTRIBUTE_ELEMENT_SIZE;
-
-                            continue;
-                        }
-                        else
-                        {
-                            // It's a valid entry, so read attribute data
-
-                            byte[] name = new byte[MAX_ENTRY_NAME_LENGTH];
-                            afsStream.Read(name, 0, name.Length);
-
-                            entriesInfo[e].Name = Utils.GetStringFromBytes(name);
-                            entriesInfo[e].LastWriteTime = new DateTime(br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16());
-                            entriesInfo[e].Unknown = br.ReadUInt32();
-                        }
-                    }
-                }
-                else
-                {
-                    for (int e = 0; e < entryCount; e++)
-                    {
-                        entriesInfo[e].Name = $"{e:00000000}";
-                    }
-                }
-
-                // After gathering all necessary info, create the entries.
-
-                for (int e = 0; e < entryCount; e++)
-                {
-                    StreamEntry entry = entriesInfo[e].IsNull ? null : new StreamEntry(this, afsStream, entriesInfo[e]);
-                    entries.Add(entry);
-                }
-
-                UpdateEntriesNames();
+                throw new ArgumentNullException(nameof(afsFilePath));
             }
+
+            if (!File.Exists(afsFilePath))
+            {
+                throw new FileNotFoundException($"File \"{afsFilePath}\" has not been found.", afsFilePath);
+            }
+
+            LoadFromStream(File.OpenRead(afsFilePath));
+            leaveAfsStreamOpen = false;
+        }
+
+        /// <summary>
+        /// Dispose the AFS object.
+        /// </summary>
+        public void Dispose()
+        {
+            CheckDisposed();
+
+            if (afsStream != null && !leaveAfsStreamOpen)
+            {
+                afsStream.Dispose();
+                afsStream = null;
+                leaveAfsStreamOpen = true;
+            }
+
+            entries.Clear();
+            duplicates.Clear();
+
+            isDisposed = true;
         }
 
         /// <summary>
@@ -228,6 +149,8 @@ namespace AFSLib
         /// <param name="outputStream">The stream where the data is going to be saved.</param>
         public void SaveToStream(Stream outputStream)
         {
+            CheckDisposed();
+
             if (outputStream == null)
             {
                 throw new ArgumentNullException(nameof(outputStream));
@@ -380,6 +303,8 @@ namespace AFSLib
         /// <param name="fileNamePath">Path to the file that will be added.</param>
         public void AddEntry(string entryName, string fileNamePath)
         {
+            CheckDisposed();
+
             if (entryName == null)
             {
                 throw new ArgumentNullException(nameof(entryName));
@@ -406,6 +331,8 @@ namespace AFSLib
         /// <param name="entryStream">Stream that contains the file that will be added.</param>
         public void AddEntry(string entryName, Stream entryStream)
         {
+            CheckDisposed();
+
             if (entryName == null)
             {
                 throw new ArgumentNullException(nameof(entryName));
@@ -435,6 +362,8 @@ namespace AFSLib
         /// <param name="entry">The entry to remove.</param>
         public void RemoveEntry(Entry entry)
         {
+            CheckDisposed();
+
             if (entry == null)
             {
                 throw new ArgumentNullException(nameof(entry));
@@ -454,6 +383,8 @@ namespace AFSLib
         /// <param name="outputFilePath">The path to the file where the entry will be saved. If it doesn't exist, it will be created.</param>
         public void ExtractEntry(Entry entry, string outputFilePath)
         {
+            CheckDisposed();
+
             if (entry == null)
             {
                 throw new ArgumentNullException(nameof(entry));
@@ -488,6 +419,8 @@ namespace AFSLib
         /// <param name="outputDirectory">The directory where the entries will be saved. If it doesn't exist, it will be created.</param>
         public void ExtractAllEntries(string outputDirectory)
         {
+            CheckDisposed();
+
             if (string.IsNullOrEmpty(outputDirectory))
             {
                 throw new ArgumentNullException(nameof(outputDirectory));
@@ -550,6 +483,134 @@ namespace AFSLib
             }
         }
 
+        private void LoadFromStream(Stream afsStream)
+        {
+            this.afsStream = afsStream;
+
+            using (BinaryReader br = new BinaryReader(afsStream, Encoding.UTF8, true))
+            {
+                // Check if the Magic is valid
+
+                uint magic = br.ReadUInt32();
+
+                if (magic == HEADER_MAGIC_00)
+                {
+                    HeaderMagicType = HeaderMagicType.AFS_00;
+                }
+                else if (magic == HEADER_MAGIC_20)
+                {
+                    HeaderMagicType = HeaderMagicType.AFS_20;
+                }
+                else
+                {
+                    throw new InvalidDataException("Stream doesn't seem to contain valid AFS data.");
+                }
+
+                // Start gathering info about entries and attributes
+
+                uint entryCount = br.ReadUInt32();
+                StreamEntryInfo[] entriesInfo = new StreamEntryInfo[entryCount];
+
+                uint entryBlockStartOffset = 0;
+                uint entryBlockEndOffset = 0;
+
+                for (int e = 0; e < entryCount; e++)
+                {
+                    entriesInfo[e].Offset = br.ReadUInt32();
+                    entriesInfo[e].Size = br.ReadUInt32();
+
+                    if (entriesInfo[e].IsNull)
+                    {
+                        continue;
+                    }
+
+                    if (entryBlockStartOffset == 0) entryBlockStartOffset = entriesInfo[e].Offset;
+                    entryBlockEndOffset = entriesInfo[e].Offset + entriesInfo[e].Size;
+                }
+
+                // Calculate the entry block alignment
+
+                uint alignment = MIN_ENTRY_BLOCK_ALIGNMENT_SIZE;
+                uint endInfoBlockOffset = (uint)afsStream.Position + ATTRIBUTE_INFO_SIZE;
+                while (endInfoBlockOffset + alignment < entryBlockStartOffset) alignment <<= 1;
+                EntryBlockAlignment = alignment;
+
+                // Find where attribute info is located
+
+                AttributesInfoType = AttributesInfoType.NoAttributes;
+
+                uint attributeDataOffset = br.ReadUInt32();
+                uint attributeDataSize = br.ReadUInt32();
+
+                bool isAttributeInfoValid = IsAttributeInfoValid(attributeDataOffset, attributeDataSize, (uint)afsStream.Length, entryBlockEndOffset);
+
+                if (isAttributeInfoValid)
+                {
+                    AttributesInfoType = AttributesInfoType.InfoAtBeginning;
+                }
+                else
+                {
+                    afsStream.Position = entryBlockStartOffset - ATTRIBUTE_INFO_SIZE;
+                    attributeDataOffset = br.ReadUInt32();
+                    attributeDataSize = br.ReadUInt32();
+
+                    isAttributeInfoValid = IsAttributeInfoValid(attributeDataOffset, attributeDataSize, (uint)afsStream.Length, entryBlockEndOffset);
+
+                    if (isAttributeInfoValid)
+                    {
+                        AttributesInfoType = AttributesInfoType.InfoAtEnd;
+                    }
+                }
+
+                // Read attribute data if there is any
+
+                if (ContainsAttributes)
+                {
+                    afsStream.Position = attributeDataOffset;
+
+                    for (int e = 0; e < entryCount; e++)
+                    {
+                        if (entriesInfo[e].IsNull)
+                        {
+                            // It's a null entry, so ignore attribute data
+
+                            afsStream.Position += ATTRIBUTE_ELEMENT_SIZE;
+
+                            continue;
+                        }
+                        else
+                        {
+                            // It's a valid entry, so read attribute data
+
+                            byte[] name = new byte[MAX_ENTRY_NAME_LENGTH];
+                            afsStream.Read(name, 0, name.Length);
+
+                            entriesInfo[e].Name = Utils.GetStringFromBytes(name);
+                            entriesInfo[e].LastWriteTime = new DateTime(br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16());
+                            entriesInfo[e].Unknown = br.ReadUInt32();
+                        }
+                    }
+                }
+                else
+                {
+                    for (int e = 0; e < entryCount; e++)
+                    {
+                        entriesInfo[e].Name = $"{e:00000000}";
+                    }
+                }
+
+                // After gathering all necessary info, create the entries.
+
+                for (int e = 0; e < entryCount; e++)
+                {
+                    StreamEntry entry = entriesInfo[e].IsNull ? null : new StreamEntry(this, afsStream, entriesInfo[e]);
+                    entries.Add(entry);
+                }
+
+                UpdateEntriesNames();
+            }
+        }
+
         private bool IsAttributeInfoValid(uint attributesOffset, uint attributesSize, uint afsFileSize, uint dataBlockEndOffset)
         {
             // If zeroes are found, info is not valid.
@@ -593,9 +654,31 @@ namespace AFSLib
             return cleanedUpName;
         }
 
+        private void CheckDisposed()
+        {
+            if (isDisposed) throw new ObjectDisposedException(GetType().Name);
+        }
+
+        #region Statics
+
+        static AFS()
+        {
+            char[] chars = Path.GetInvalidPathChars();
+            invalidPathChars = new string[chars.Length];
+            for (int ipc = 0; ipc < chars.Length; ipc++)
+            {
+                invalidPathChars[ipc] = chars[ipc].ToString();
+            }
+        }
+
+        /// <summary>
+        /// Get the version of AFSLib.
+        /// </summary>
         public static Version GetVersion()
         {
             return Assembly.GetExecutingAssembly().GetName().Version;
         }
+
+        #endregion
     }
 }
