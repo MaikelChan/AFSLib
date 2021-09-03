@@ -307,7 +307,7 @@ namespace AFSLib
 
             if (entryName == null)
             {
-                throw new ArgumentNullException(nameof(entryName));
+                entryName = string.Empty;
             }
 
             if (string.IsNullOrEmpty(fileNamePath))
@@ -335,7 +335,7 @@ namespace AFSLib
 
             if (entryName == null)
             {
-                throw new ArgumentNullException(nameof(entryName));
+                entryName = string.Empty;
             }
 
             if (entryStream == null)
