@@ -428,7 +428,7 @@ namespace AFSLib
         /// </summary>
         /// <param name="entry">The entry to extract.</param>
         /// <param name="outputFilePath">The path to the file where the entry will be saved. If it doesn't exist, it will be created.</param>
-        public void ExtractEntry(Entry entry, string outputFilePath)
+        public void ExtractEntryToFile(Entry entry, string outputFilePath)
         {
             CheckDisposed();
 
@@ -491,7 +491,7 @@ namespace AFSLib
                     NotifyProgress?.Invoke(NotificationType.Warning, $"File \"{outputFilePath}\" already exists. Overwriting...");
                 }
 
-                ExtractEntry(entries[e], outputFilePath);
+                ExtractEntryToFile(entries[e], outputFilePath);
             }
 
             NotifyProgress?.Invoke(NotificationType.Success, $"Finished extracting all entries successfully.");
@@ -750,6 +750,17 @@ namespace AFSLib
         public void AddEntry(string entryName, Stream entryStream)
         {
             AddEntryFromStream(entryStream, entryName);
+        }
+
+        /// <summary>
+        /// Extracts one entry to a file.
+        /// </summary>
+        /// <param name="entry">The entry to extract.</param>
+        /// <param name="outputFilePath">The path to the file where the entry will be saved. If it doesn't exist, it will be created.</param>
+        [Obsolete("This method is deprecated since version 1.1.0, please use ExtractEntryToFile(Entry, string) instead.")]
+        public void ExtractEntry(Entry entry, string outputFilePath)
+        {
+            ExtractEntryToFile(entry, outputFilePath);
         }
 
         #endregion
