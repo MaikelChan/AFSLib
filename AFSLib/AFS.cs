@@ -144,10 +144,27 @@ namespace AFSLib
         }
 
         /// <summary>
+        /// Saves the contents of this AFS object into a file.
+        /// </summary>
+        /// <param name="outputFilePath">The path to the file where the data is going to be saved.</param>
+        public void Save(string outputFilePath)
+        {
+            if (string.IsNullOrEmpty(outputFilePath))
+            {
+                throw new ArgumentNullException(nameof(outputFilePath));
+            }
+
+            using (FileStream outputStream = File.Create(outputFilePath))
+            {
+                Save(outputStream);
+            }
+        }
+
+        /// <summary>
         /// Saves the contents of this AFS object into a stream.
         /// </summary>
         /// <param name="outputStream">The stream where the data is going to be saved.</param>
-        public void SaveToStream(Stream outputStream)
+        public void Save(Stream outputStream)
         {
             CheckDisposed();
 
@@ -707,6 +724,20 @@ namespace AFSLib
         public static Version GetVersion()
         {
             return Assembly.GetExecutingAssembly().GetName().Version;
+        }
+
+        #endregion
+
+        #region Deprecated
+
+        /// <summary>
+        /// Saves the contents of this AFS object into a stream.
+        /// </summary>
+        /// <param name="outputStream">The stream where the data is going to be saved.</param>
+        [Obsolete("This method is deprecated since version 1.1.0, please use Save(Stream outputStream) instead.")]
+        public void SaveToStream(Stream outputStream)
+        {
+            Save(outputStream);
         }
 
         #endregion
