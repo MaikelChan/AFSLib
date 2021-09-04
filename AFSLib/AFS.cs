@@ -147,7 +147,7 @@ namespace AFSLib
         /// Saves the contents of this AFS object into a file.
         /// </summary>
         /// <param name="outputFilePath">The path to the file where the data is going to be saved.</param>
-        public void Save(string outputFilePath)
+        public void SaveToFile(string outputFilePath)
         {
             if (string.IsNullOrEmpty(outputFilePath))
             {
@@ -156,7 +156,7 @@ namespace AFSLib
 
             using (FileStream outputStream = File.Create(outputFilePath))
             {
-                Save(outputStream);
+                SaveToStream(outputStream);
             }
         }
 
@@ -164,7 +164,7 @@ namespace AFSLib
         /// Saves the contents of this AFS object into a stream.
         /// </summary>
         /// <param name="outputStream">The stream where the data is going to be saved.</param>
-        public void Save(Stream outputStream)
+        public void SaveToStream(Stream outputStream)
         {
             CheckDisposed();
 
@@ -316,16 +316,11 @@ namespace AFSLib
         /// <summary>
         /// Adds a new entry from a file.
         /// </summary>
-        /// <param name="entryName">The name of the entry.</param>
         /// <param name="fileNamePath">Path to the file that will be added.</param>
-        public void AddEntry(string entryName, string fileNamePath)
+        /// <param name="entryName">The name of the entry. If null, it will be the name of the file in fileNamePath.</param>
+        public void AddEntryFromFile(string fileNamePath, string entryName = null)
         {
             CheckDisposed();
-
-            if (entryName == null)
-            {
-                entryName = string.Empty;
-            }
 
             if (string.IsNullOrEmpty(fileNamePath))
             {
@@ -337,6 +332,11 @@ namespace AFSLib
                 throw new FileNotFoundException($"File \"{fileNamePath}\" has not been found.", fileNamePath);
             }
 
+            if (entryName == null)
+            {
+                entryName = Path.GetFileName(fileNamePath);
+            }
+
             entries.Add(new FileEntry(this, fileNamePath, entryName));
             UpdateEntriesNames();
         }
@@ -344,20 +344,20 @@ namespace AFSLib
         /// <summary>
         /// Adds a new entry from a stream.
         /// </summary>
-        /// <param name="entryName">The name of the entry.</param>
         /// <param name="entryStream">Stream that contains the file that will be added.</param>
-        public void AddEntry(string entryName, Stream entryStream)
+        /// <param name="entryName">The name of the entry. If null, it will be considered as string.Empty.</param>
+        public void AddEntryFromStream(Stream entryStream, string entryName)
         {
             CheckDisposed();
-
-            if (entryName == null)
-            {
-                entryName = string.Empty;
-            }
 
             if (entryStream == null)
             {
                 throw new ArgumentNullException(nameof(entryStream));
+            }
+
+            if (entryName == null)
+            {
+                entryName = string.Empty;
             }
 
             StreamEntryInfo info = new StreamEntryInfo()
@@ -378,7 +378,7 @@ namespace AFSLib
         /// </summary>
         /// <param name="directory">The path to the directory.</param>
         /// <param name="recursiveSearch">When true, it adds all files in the specified directory and its subdirectories. When false, it ignores any subdirectories.</param>
-        public void AddEntriesFromDirectory(string directory, bool recursiveSearch)
+        public void AddEntriesFromDirectory(string directory, bool recursiveSearch = false)
         {
             CheckDisposed();
 
@@ -731,13 +731,25 @@ namespace AFSLib
         #region Deprecated
 
         /// <summary>
-        /// Saves the contents of this AFS object into a stream.
+        /// Adds a new entry from a file.
         /// </summary>
-        /// <param name="outputStream">The stream where the data is going to be saved.</param>
-        [Obsolete("This method is deprecated since version 1.1.0, please use Save(Stream outputStream) instead.")]
-        public void SaveToStream(Stream outputStream)
+        /// <param name="entryName">The name of the entry.</param>
+        /// <param name="fileNamePath">Path to the file that will be added.</param>
+        [Obsolete("This method is deprecated since version 1.1.0, please use AddEntryFromFile(string, string) instead.")]
+        public void AddEntry(string entryName, string fileNamePath)
         {
-            Save(outputStream);
+            AddEntryFromFile(fileNamePath, entryName);
+        }
+
+        /// <summary>
+        /// Adds a new entry from a stream.
+        /// </summary>
+        /// <param name="entryName">The name of the entry.</param>
+        /// <param name="entryStream">Stream that contains the file that will be added.</param>
+        [Obsolete("This method is deprecated since version 1.1.0, please use AddEntryFromStream(Stream, string) instead.")]
+        public void AddEntry(string entryName, Stream entryStream)
+        {
+            AddEntryFromStream(entryStream, entryName);
         }
 
         #endregion
