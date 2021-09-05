@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace AFSLib
 {
@@ -6,8 +7,18 @@ namespace AFSLib
     {
         private readonly FileInfo fileInfo;
 
-        internal FileEntry(AFS afs, string fileNamePath, string entryName) : base(afs)
+        internal FileEntry(string fileNamePath, string entryName)
         {
+            if (entryName == null)
+            {
+                entryName = string.Empty;
+            }
+
+            if (entryName.Length > AFS.MAX_ENTRY_NAME_LENGTH)
+            {
+                throw new ArgumentOutOfRangeException(nameof(entryName), $"Entry name can't be longer than {AFS.MAX_ENTRY_NAME_LENGTH} characters: \"{entryName}\".");
+            }
+
             fileInfo = new FileInfo(fileNamePath);
 
             rawName = entryName;

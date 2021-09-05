@@ -62,8 +62,6 @@ namespace AFSLib
         private readonly ReadOnlyCollection<Entry> readonlyEntries;
         private readonly Dictionary<string, uint> duplicates;
 
-        private static readonly string[] invalidPathChars;
-
         private Stream afsStream;
         private bool leaveAfsStreamOpen;
 
@@ -318,7 +316,8 @@ namespace AFSLib
         /// </summary>
         /// <param name="fileNamePath">Path to the file that will be added.</param>
         /// <param name="entryName">The name of the entry. If null, it will be the name of the file in fileNamePath.</param>
-        public void AddEntryFromFile(string fileNamePath, string entryName = null)
+        /// <returns>A reference to the added entry.</returns>
+        public Entry AddEntryFromFile(string fileNamePath, string entryName = null)
         {
             CheckDisposed();
 
@@ -337,8 +336,11 @@ namespace AFSLib
                 entryName = Path.GetFileName(fileNamePath);
             }
 
-            entries.Add(new FileEntry(this, fileNamePath, entryName));
+            Entry entry = new FileEntry(fileNamePath, entryName);
+            Internal_AddEntry(entry);
             UpdateEntriesNames();
+
+            return entry;
         }
 
         /// <summary>
@@ -346,7 +348,8 @@ namespace AFSLib
         /// </summary>
         /// <param name="entryStream">Stream that contains the file that will be added.</param>
         /// <param name="entryName">The name of the entry. If null, it will be considered as string.Empty.</param>
-        public void AddEntryFromStream(Stream entryStream, string entryName)
+        /// <returns>A reference to the added entry.</returns>
+        public Entry AddEntryFromStream(Stream entryStream, string entryName)
         {
             CheckDisposed();
 
@@ -363,14 +366,17 @@ namespace AFSLib
             StreamEntryInfo info = new StreamEntryInfo()
             {
                 Offset = 0,
-                Name = entryName,
+                RawName = entryName,
                 Size = (uint)entryStream.Length,
                 LastWriteTime = DateTime.Now,
                 Unknown = (uint)entryStream.Length
             };
 
-            entries.Add(new StreamEntry(this, entryStream, info));
+            Entry entry = new StreamEntry(entryStream, info);
+            Internal_AddEntry(entry);
             UpdateEntriesNames();
+
+            return entry;
         }
 
         /// <summary>
@@ -397,7 +403,7 @@ namespace AFSLib
             for (int f = 0; f < files.Length; f++)
             {
                 string entryName = Path.GetFileName(files[f]);
-                entries.Add(new FileEntry(this, files[f], entryName));
+                Internal_AddEntry(new FileEntry(files[f], entryName));
             }
 
             UpdateEntriesNames();
@@ -418,7 +424,7 @@ namespace AFSLib
 
             if (entries.Contains(entry))
             {
-                entries.Remove(entry);
+                Internal_RemoveEntry(entry);
                 UpdateEntriesNames();
             }
         }
@@ -632,7 +638,7 @@ namespace AFSLib
                             byte[] name = new byte[MAX_ENTRY_NAME_LENGTH];
                             afsStream.Read(name, 0, name.Length);
 
-                            entriesInfo[e].Name = Utils.GetStringFromBytes(name);
+                            entriesInfo[e].RawName = Utils.GetStringFromBytes(name);
                             entriesInfo[e].LastWriteTime = new DateTime(br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16());
                             entriesInfo[e].Unknown = br.ReadUInt32();
                         }
@@ -642,7 +648,7 @@ namespace AFSLib
                 {
                     for (int e = 0; e < entryCount; e++)
                     {
-                        entriesInfo[e].Name = $"{e:00000000}";
+                        entriesInfo[e].RawName = $"{e:00000000}";
                     }
                 }
 
@@ -650,12 +656,24 @@ namespace AFSLib
 
                 for (int e = 0; e < entryCount; e++)
                 {
-                    StreamEntry entry = entriesInfo[e].IsNull ? null : new StreamEntry(this, afsStream, entriesInfo[e]);
-                    entries.Add(entry);
+                    StreamEntry entry = entriesInfo[e].IsNull ? null : new StreamEntry(afsStream, entriesInfo[e]);
+                    Internal_AddEntry(entry);
                 }
 
                 UpdateEntriesNames();
             }
+        }
+
+        private void Internal_AddEntry(Entry entry)
+        {
+            entries.Add(entry);
+            entry.RawNameChanged += UpdateEntriesNames;
+        }
+
+        private void Internal_RemoveEntry(Entry entry)
+        {
+            entry.RawNameChanged -= UpdateEntriesNames;
+            entries.Remove(entry);
         }
 
         private bool IsAttributeInfoValid(uint attributesOffset, uint attributesSize, uint afsFileSize, uint dataBlockEndOffset)
@@ -708,13 +726,24 @@ namespace AFSLib
 
         #region Statics
 
+        internal static readonly string[] invalidPathChars;
+        internal static readonly string[] invalidFileNameChars;
+
         static AFS()
         {
-            char[] chars = Path.GetInvalidPathChars();
-            invalidPathChars = new string[chars.Length];
-            for (int ipc = 0; ipc < chars.Length; ipc++)
+            char[] pChars = Path.GetInvalidPathChars();
+            char[] fChars = Path.GetInvalidFileNameChars();
+
+            invalidPathChars = new string[pChars.Length];
+            for (int ipc = 0; ipc < pChars.Length; ipc++)
             {
-                invalidPathChars[ipc] = chars[ipc].ToString();
+                invalidPathChars[ipc] = pChars[ipc].ToString();
+            }
+
+            invalidFileNameChars = new string[fChars.Length];
+            for (int ifc = 0; ifc < fChars.Length; ifc++)
+            {
+                invalidFileNameChars[ifc] = fChars[ifc].ToString();
             }
         }
 

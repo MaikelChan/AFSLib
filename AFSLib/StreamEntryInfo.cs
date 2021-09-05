@@ -5,7 +5,7 @@ namespace AFSLib
     internal struct StreamEntryInfo
     {
         public uint Offset;
-        public string Name;
+        public string RawName;
         public uint Size;
         public DateTime LastWriteTime;
         public uint Unknown;
