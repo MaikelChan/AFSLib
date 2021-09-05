@@ -470,7 +470,7 @@ namespace AFSLib
         /// Extracts all the entries from the AFS object.
         /// </summary>
         /// <param name="outputDirectory">The directory where the entries will be saved. If it doesn't exist, it will be created.</param>
-        public void ExtractAllEntries(string outputDirectory)
+        public void ExtractAllEntriesToDirectory(string outputDirectory)
         {
             CheckDisposed();
 
@@ -790,6 +790,16 @@ namespace AFSLib
         public void ExtractEntry(Entry entry, string outputFilePath)
         {
             ExtractEntryToFile(entry, outputFilePath);
+        }
+
+        /// <summary>
+        /// Extracts all the entries from the AFS object.
+        /// </summary>
+        /// <param name="outputDirectory">The directory where the entries will be saved. If it doesn't exist, it will be created.</param>
+        [Obsolete("This method is deprecated since version 1.1.0, please use ExtractAllEntriesToDirectory(string) instead.")]
+        public void ExtractAllEntries(string outputDirectory)
+        {
+            ExtractAllEntriesToDirectory(outputDirectory);
         }
 
         #endregion
