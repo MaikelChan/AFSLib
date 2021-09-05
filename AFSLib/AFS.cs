@@ -60,7 +60,6 @@ namespace AFSLib
 
         private readonly List<Entry> entries;
         private readonly ReadOnlyCollection<Entry> readonlyEntries;
-        private readonly Dictionary<string, uint> duplicates;
 
         private Stream afsStream;
         private bool leaveAfsStreamOpen;
@@ -282,7 +281,7 @@ namespace AFSLib
                         {
                             NotifyProgress?.Invoke(NotificationType.Info, $"Writing attribute... {e + 1}/{EntryCount}");
 
-                            byte[] name = Encoding.Default.GetBytes(entries[e].RawName);
+                            byte[] name = Encoding.Default.GetBytes(entries[e].Name);
                             outputStream.Write(name, 0, name.Length);
                             outputStream.Position += MAX_ENTRY_NAME_LENGTH - name.Length;
 
@@ -338,7 +337,7 @@ namespace AFSLib
 
             Entry entry = new FileEntry(fileNamePath, entryName);
             Internal_AddEntry(entry);
-            UpdateEntriesNames();
+            UpdateSanitizedEntriesNames();
 
             return entry;
         }
@@ -366,7 +365,7 @@ namespace AFSLib
             StreamEntryInfo info = new StreamEntryInfo()
             {
                 Offset = 0,
-                RawName = entryName,
+                Name = entryName,
                 Size = (uint)entryStream.Length,
                 LastWriteTime = DateTime.Now,
                 Unknown = (uint)entryStream.Length
@@ -374,7 +373,7 @@ namespace AFSLib
 
             Entry entry = new StreamEntry(entryStream, info);
             Internal_AddEntry(entry);
-            UpdateEntriesNames();
+            UpdateSanitizedEntriesNames();
 
             return entry;
         }
@@ -406,7 +405,7 @@ namespace AFSLib
                 Internal_AddEntry(new FileEntry(files[f], entryName));
             }
 
-            UpdateEntriesNames();
+            UpdateSanitizedEntriesNames();
         }
 
         /// <summary>
@@ -425,7 +424,7 @@ namespace AFSLib
             if (entries.Contains(entry))
             {
                 Internal_RemoveEntry(entry);
-                UpdateEntriesNames();
+                UpdateSanitizedEntriesNames();
             }
         }
 
@@ -491,7 +490,7 @@ namespace AFSLib
 
                 NotifyProgress?.Invoke(NotificationType.Info, $"Extracting entry... {e + 1}/{EntryCount}");
 
-                string outputFilePath = Path.Combine(outputDirectory, entries[e].Name);
+                string outputFilePath = Path.Combine(outputDirectory, entries[e].SanitizedName);
                 if (File.Exists(outputFilePath))
                 {
                     NotifyProgress?.Invoke(NotificationType.Warning, $"File \"{outputFilePath}\" already exists. Overwriting...");
@@ -501,39 +500,6 @@ namespace AFSLib
             }
 
             NotifyProgress?.Invoke(NotificationType.Success, $"Finished extracting all entries successfully.");
-        }
-
-        /// <summary>
-        /// Updates the names of all the entries to be unique in case of duplicates and cleans them up to not contain invalid characters.
-        /// </summary>
-        internal void UpdateEntriesNames()
-        {
-            // There can be multiple files with the same name, so keep track of duplicates
-
-            duplicates.Clear();
-
-            for (int e = 0; e < EntryCount; e++)
-            {
-                if (entries[e] == null) continue;
-
-                string cleanedUpName = CleanUpName(entries[e].RawName);
-
-                bool found = duplicates.TryGetValue(cleanedUpName, out uint duplicateCount);
-
-                if (found) duplicates[cleanedUpName] = ++duplicateCount;
-                else duplicates.Add(cleanedUpName, 0);
-
-                if (duplicateCount > 0)
-                {
-                    string nameWithoutExtension = Path.ChangeExtension(cleanedUpName, null);
-                    string nameDuplicate = $" ({duplicateCount})";
-                    string nameExtension = Path.GetExtension(cleanedUpName);
-
-                    cleanedUpName = nameWithoutExtension + nameDuplicate + nameExtension;
-                }
-
-                entries[e].UpdateName(cleanedUpName);
-            }
         }
 
         private void LoadFromStream(Stream afsStream)
@@ -638,7 +604,7 @@ namespace AFSLib
                             byte[] name = new byte[MAX_ENTRY_NAME_LENGTH];
                             afsStream.Read(name, 0, name.Length);
 
-                            entriesInfo[e].RawName = Utils.GetStringFromBytes(name);
+                            entriesInfo[e].Name = Utils.GetStringFromBytes(name);
                             entriesInfo[e].LastWriteTime = new DateTime(br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16());
                             entriesInfo[e].Unknown = br.ReadUInt32();
                         }
@@ -648,7 +614,7 @@ namespace AFSLib
                 {
                     for (int e = 0; e < entryCount; e++)
                     {
-                        entriesInfo[e].RawName = $"{e:00000000}";
+                        entriesInfo[e].Name = $"{e:00000000}";
                     }
                 }
 
@@ -660,19 +626,19 @@ namespace AFSLib
                     Internal_AddEntry(entry);
                 }
 
-                UpdateEntriesNames();
+                UpdateSanitizedEntriesNames();
             }
         }
 
         private void Internal_AddEntry(Entry entry)
         {
             entries.Add(entry);
-            entry.RawNameChanged += UpdateEntriesNames;
+            entry.NameChanged += UpdateSanitizedEntriesNames;
         }
 
         private void Internal_RemoveEntry(Entry entry)
         {
-            entry.RawNameChanged -= UpdateEntriesNames;
+            entry.NameChanged -= UpdateSanitizedEntriesNames;
             entries.Remove(entry);
         }
 
@@ -693,7 +659,46 @@ namespace AFSLib
             return true;
         }
 
-        private string CleanUpName(string name)
+        private void CheckDisposed()
+        {
+            if (isDisposed) throw new ObjectDisposedException(GetType().Name);
+        }
+
+        #region Name sanitization
+
+        private readonly Dictionary<string, uint> duplicates;
+
+        private void UpdateSanitizedEntriesNames()
+        {
+            // There can be multiple files with the same name, so keep track of duplicates
+
+            duplicates.Clear();
+
+            for (int e = 0; e < EntryCount; e++)
+            {
+                if (entries[e] == null) continue;
+
+                string sanitizedName = SanitizeName(entries[e].Name);
+
+                bool found = duplicates.TryGetValue(sanitizedName, out uint duplicateCount);
+
+                if (found) duplicates[sanitizedName] = ++duplicateCount;
+                else duplicates.Add(sanitizedName, 0);
+
+                if (duplicateCount > 0)
+                {
+                    string nameWithoutExtension = Path.ChangeExtension(sanitizedName, null);
+                    string nameDuplicate = $" ({duplicateCount})";
+                    string nameExtension = Path.GetExtension(sanitizedName);
+
+                    sanitizedName = nameWithoutExtension + nameDuplicate + nameExtension;
+                }
+
+                entries[e].SanitizedName = sanitizedName;
+            }
+        }
+
+        private static string SanitizeName(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -705,29 +710,26 @@ namespace AFSLib
             // There are some cases where instead of a file name, an AFS file will store a path, like in Soul Calibur 2 or Crimson Tears.
             // Let's make sure there aren't any invalid characters in the path so the OS doesn't complain.
 
-            string cleanedUpName = name;
+            string sanitizedName = name;
 
             for (int ipc = 0; ipc < invalidPathChars.Length; ipc++)
             {
-                cleanedUpName = cleanedUpName.Replace(invalidPathChars[ipc], string.Empty);
+                sanitizedName = sanitizedName.Replace(invalidPathChars[ipc], string.Empty);
             }
 
             // Also remove any ":" in case there are drive letters in the path (like, again, in Soul Calibur 2)
 
-            cleanedUpName = cleanedUpName.Replace(":", string.Empty);
+            sanitizedName = sanitizedName.Replace(":", string.Empty);
 
-            return cleanedUpName;
+            return sanitizedName;
         }
 
-        private void CheckDisposed()
-        {
-            if (isDisposed) throw new ObjectDisposedException(GetType().Name);
-        }
+        #endregion
 
         #region Statics
 
-        internal static readonly string[] invalidPathChars;
-        internal static readonly string[] invalidFileNameChars;
+        private static readonly string[] invalidPathChars;
+        private static readonly string[] invalidFileNameChars;
 
         static AFS()
         {
