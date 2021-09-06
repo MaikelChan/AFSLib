@@ -63,7 +63,7 @@ using (AFS afs = new AFS(@"C:\Data\MyArchive.afs"))
 {
     // Extract all the entries to the specified directory.
 
-    afs.ExtractAllEntries(@"C:\Data\Files");
+    afs.ExtractAllEntriesToDirectory(@"C:\Data\Files");
 }
 ```
 
@@ -74,10 +74,20 @@ using (AFS afs = new AFS(@"C:\Data\MyArchive.afs"))
 
 using (AFS afs = new AFS(@"C:\Data\MyArchive.afs"))
 {
-    // Change some properties.
+    // To change some properties, first we need to be sure that we
+    // are trying to change an entry with data, and not a null entry.
+    // So cast to DataEntry, which is the parent class of all entries
+    // that can contain data.
 
-    afs.Entries[0].Name = "NewFileName.txt";
-    afs.Entries[0].LastWriteTime = DateTime.Now;
+    DataEntry dataEntry = afs.Entries[0] as DataEntry;
+    if (dataEntry != null)
+    {
+        // It seems that it's indeed an entry with data,
+        // so let's change some stuff.
+
+        dataEntry.Name = "NewFileName.txt";
+        dataEntry.LastWriteTime = DateTime.Now;
+    }
 
     // Save again with a different name.
 
@@ -141,7 +151,7 @@ using (AFS afs = new AFS(@"C:\Data\MyArchive.afs"))
 
     // Extract all the entries to the specified directory.
 
-    afs.ExtractAllEntries(@"C:\Data\Files");
+    afs.ExtractAllEntriesToDirectory(@"C:\Data\Files");
 }
 
 static void Afs_NotifyProgress(NotificationType type, string message)
