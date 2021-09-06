@@ -2,6 +2,9 @@
 
 namespace AFSLib
 {
+    /// <summary>
+    /// Abstract class that represents an entry with data.
+    /// </summary>
     public abstract class DataEntry : Entry
     {
         /// <summary>

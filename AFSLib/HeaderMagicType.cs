@@ -1,6 +1,9 @@
 ﻿
 namespace AFSLib
 {
+    /// <summary>
+    /// Enumeration containing each type of header magic that can be found in an AFS archive.
+    /// </summary>
     public enum HeaderMagicType
     {
         /// <summary>

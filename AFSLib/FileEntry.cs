@@ -2,6 +2,9 @@
 
 namespace AFSLib
 {
+    /// <summary>
+    /// Class that represents an entry with data referenced from a file.
+    /// </summary>
     public sealed class FileEntry : DataEntry
     {
         private readonly FileInfo fileInfo;

@@ -1,6 +1,9 @@
 ﻿
 namespace AFSLib
 {
+    /// <summary>
+    /// Enumeration that contains all possible attribute info locations in an AFS archive.
+    /// </summary>
     public enum AttributesInfoType
     {
         /// <summary>

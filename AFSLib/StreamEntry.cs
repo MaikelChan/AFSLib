@@ -2,6 +2,9 @@
 
 namespace AFSLib
 {
+    /// <summary>
+    /// Class that represents an entry with data referenced from a stream.
+    /// </summary>
     public sealed class StreamEntry : DataEntry
     {
         private readonly Stream baseStream;

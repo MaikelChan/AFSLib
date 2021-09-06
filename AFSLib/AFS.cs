@@ -7,6 +7,9 @@ using System.Text;
 
 namespace AFSLib
 {
+    /// <summary>
+    /// Class that represents one AFS archive. It can be created from scratch or loaded from a file or stream.
+    /// </summary>
     public class AFS : IDisposable
     {
         /// <summary>
@@ -44,6 +47,12 @@ namespace AFSLib
         /// Event that will be called each time some process wants to report something.
         /// </summary>
         public event NotifyProgressDelegate NotifyProgress;
+
+        /// <summary>
+        /// Represents the method that will handle the NotifyProgress event.
+        /// </summary>
+        /// <param name="type">Type of notification.</param>
+        /// <param name="message">The notification message.</param>
         public delegate void NotifyProgressDelegate(NotificationType type, string message);
 
         internal const uint HEADER_MAGIC_00 = 0x00534641; // AFS

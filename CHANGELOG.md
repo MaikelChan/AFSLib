@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.1] - 2021-09-06
+### Fixed
+- Fixed missing XML documentation in NuGet package.
+
 ## [2.0.0] - 2021-09-06
 ### Added
 - Entry block alignment is now configurable.

@@ -2,11 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Authors>MaikelChan</Authors>
     <Description>AFSLib is a library that can extract, create and manipulate AFS files. The AFS format is used in many games from companies like Sega.</Description>
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.0.0.0</FileVersion>
-    <Version>2.0.0</Version>
+    <AssemblyVersion>2.0.1.0</AssemblyVersion>
+    <FileVersion>2.0.1.0</FileVersion>
+    <Version>2.0.1</Version>
     <Company />
     <PackageProjectUrl>https://github.com/MaikelChan/AFSLib</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MaikelChan/AFSLib</RepositoryUrl>
