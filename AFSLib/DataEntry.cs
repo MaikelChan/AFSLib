@@ -51,7 +51,13 @@ namespace AFSLib
         /// <summary>
         /// In many AFS archives this contains the entry size, but some of them contain some unknown values.
         /// </summary>
-        public uint Unknown { get; set; }
+        public uint UnknownAttribute { get; set; }
+
+        /// <summary>
+        /// Usually, UnknownAttribute will contain the same value as Size, but sometimes it will contain a different unknown value.
+        /// This returns true if it's the later.
+        /// </summary>
+        public bool HasUnknownAttribute => Size != UnknownAttribute;
 
         internal event Action NameChanged;
 

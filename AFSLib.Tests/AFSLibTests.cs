@@ -38,7 +38,7 @@ namespace AFSLib.Tests
                     uint entryBlockAlignment;
                     string[] entriesNames;
                     string[] entriesSanitizedNames;
-                    uint[] entriesUnknowns;
+                    uint[] entriesUnknownAttributes;
 
                     using (FileStream stream1 = File.OpenRead(filePath1))
                     {
@@ -52,7 +52,7 @@ namespace AFSLib.Tests
                         entryBlockAlignment = afs1.EntryBlockAlignment;
                         entriesNames = new string[afs1.Entries.Count];
                         entriesSanitizedNames = new string[afs1.Entries.Count];
-                        entriesUnknowns = new uint[afs1.Entries.Count];
+                        entriesUnknownAttributes = new uint[afs1.Entries.Count];
 
                         for (int e = 0; e < entriesSanitizedNames.Length; e++)
                         {
@@ -60,7 +60,7 @@ namespace AFSLib.Tests
                             {
                                 entriesNames[e] = null;
                                 entriesSanitizedNames[e] = null;
-                                entriesUnknowns[e] = 0;
+                                entriesUnknownAttributes[e] = 0;
                             }
                             else
                             {
@@ -68,7 +68,7 @@ namespace AFSLib.Tests
 
                                 entriesNames[e] = dataEntry.Name;
                                 entriesSanitizedNames[e] = dataEntry.SanitizedName;
-                                entriesUnknowns[e] = dataEntry.Unknown;
+                                entriesUnknownAttributes[e] = dataEntry.UnknownAttribute;
                             }
                         }
 
@@ -90,7 +90,7 @@ namespace AFSLib.Tests
                             else
                             {
                                 FileEntry fileEntry = afs2.AddEntryFromFile(Path.Combine(extractionDirectory, entriesSanitizedNames[e]), entriesNames[e]);
-                                fileEntry.Unknown = entriesUnknowns[e];
+                                fileEntry.UnknownAttribute = entriesUnknownAttributes[e];
                             }
                         }
 

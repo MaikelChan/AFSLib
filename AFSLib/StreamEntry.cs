@@ -15,7 +15,7 @@ namespace AFSLib
             Name = info.Name;
             Size = info.Size;
             LastWriteTime = info.LastWriteTime;
-            Unknown = info.Unknown;
+            UnknownAttribute = info.UnknownAttribute;
         }
 
         internal override Stream GetStream()

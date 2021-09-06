@@ -296,7 +296,7 @@ namespace AFSLib
                             bw.Write((ushort)dataEntry.LastWriteTime.Hour);
                             bw.Write((ushort)dataEntry.LastWriteTime.Minute);
                             bw.Write((ushort)dataEntry.LastWriteTime.Second);
-                            bw.Write(dataEntry.Unknown);
+                            bw.Write(dataEntry.UnknownAttribute);
                         }
                     }
                 }
@@ -373,7 +373,7 @@ namespace AFSLib
                 Name = entryName,
                 Size = (uint)entryStream.Length,
                 LastWriteTime = DateTime.Now,
-                Unknown = (uint)entryStream.Length
+                UnknownAttribute = (uint)entryStream.Length
             };
 
             StreamEntry streamEntry = new StreamEntry(entryStream, info);
@@ -636,7 +636,7 @@ namespace AFSLib
 
                             entriesInfo[e].Name = Utils.GetStringFromBytes(name);
                             entriesInfo[e].LastWriteTime = new DateTime(br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16());
-                            entriesInfo[e].Unknown = br.ReadUInt32();
+                            entriesInfo[e].UnknownAttribute = br.ReadUInt32();
                         }
                     }
                 }
