@@ -36,8 +36,8 @@ namespace AFSLib.Tests
                     HeaderMagicType header;
                     AttributesInfoType attributesInfo;
                     uint entryBlockAlignment;
-                    string[] entriesRawNames;
                     string[] entriesNames;
+                    string[] entriesSanitizedNames;
                     uint[] entriesUnknowns;
 
                     using (FileStream stream1 = File.OpenRead(filePath1))
@@ -50,15 +50,26 @@ namespace AFSLib.Tests
                         header = afs1.HeaderMagicType;
                         attributesInfo = afs1.AttributesInfoType;
                         entryBlockAlignment = afs1.EntryBlockAlignment;
-                        entriesRawNames = new string[afs1.Entries.Count];
                         entriesNames = new string[afs1.Entries.Count];
+                        entriesSanitizedNames = new string[afs1.Entries.Count];
                         entriesUnknowns = new uint[afs1.Entries.Count];
 
-                        for (int e = 0; e < entriesNames.Length; e++)
+                        for (int e = 0; e < entriesSanitizedNames.Length; e++)
                         {
-                            entriesRawNames[e] = afs1.Entries[e].Name;
-                            entriesNames[e] = afs1.Entries[e].SanitizedName;
-                            entriesUnknowns[e] = afs1.Entries[e].Unknown;
+                            if (afs1.Entries[e] is NullEntry)
+                            {
+                                entriesNames[e] = null;
+                                entriesSanitizedNames[e] = null;
+                                entriesUnknowns[e] = 0;
+                            }
+                            else
+                            {
+                                DataEntry dataEntry = afs1.Entries[e] as DataEntry;
+
+                                entriesNames[e] = dataEntry.Name;
+                                entriesSanitizedNames[e] = dataEntry.SanitizedName;
+                                entriesUnknowns[e] = dataEntry.Unknown;
+                            }
                         }
 
                         afs1.ExtractAllEntriesToDirectory(extractionDirectory);
@@ -70,10 +81,17 @@ namespace AFSLib.Tests
                         afs2.AttributesInfoType = attributesInfo;
                         afs2.EntryBlockAlignment = entryBlockAlignment;
 
-                        for (int e = 0; e < entriesNames.Length; e++)
+                        for (int e = 0; e < entriesSanitizedNames.Length; e++)
                         {
-                            Entry entry = afs2.AddEntryFromFile(Path.Combine(extractionDirectory, entriesNames[e]), entriesRawNames[e]);
-                            entry.Unknown = entriesUnknowns[e];
+                            if (entriesSanitizedNames[e] == null && entriesNames[e] == null)
+                            {
+                                afs2.AddNullEntry();
+                            }
+                            else
+                            {
+                                FileEntry fileEntry = afs2.AddEntryFromFile(Path.Combine(extractionDirectory, entriesSanitizedNames[e]), entriesNames[e]);
+                                fileEntry.Unknown = entriesUnknowns[e];
+                            }
                         }
 
                         afs2.SaveToFile(filePath2);

@@ -56,7 +56,7 @@ namespace AFSLib
         internal const uint MIN_ENTRY_BLOCK_ALIGNMENT_SIZE = 0x800;
         internal const uint ALIGNMENT_SIZE = 0x800;
 
-        internal const string DUMMY_ENTRY_NAME_FOR_BLANK_RAW_NAME = "_NO_NAME";
+        internal const string DUMMY_ENTRY_NAME_FOR_BLANK_NAME = "_NO_NAME";
 
         private readonly List<Entry> entries;
         private readonly ReadOnlyCollection<Entry> readonlyEntries;
@@ -193,7 +193,7 @@ namespace AFSLib
 
                 for (int e = 0; e < EntryCount; e++)
                 {
-                    if (entries[e] == null)
+                    if (entries[e] is NullEntry)
                     {
                         offsets[e] = 0;
                     }
@@ -201,7 +201,8 @@ namespace AFSLib
                     {
                         offsets[e] = currentEntryOffset;
 
-                        currentEntryOffset += entries[e].Size;
+                        DataEntry dataEntry = entries[e] as DataEntry;
+                        currentEntryOffset += dataEntry.Size;
                         currentEntryOffset = Utils.Pad(currentEntryOffset, ALIGNMENT_SIZE);
                     }
                 }
@@ -212,15 +213,17 @@ namespace AFSLib
                 {
                     NotifyProgress?.Invoke(NotificationType.Info, $"Writing entry info... {e + 1}/{EntryCount}");
 
-                    if (entries[e] == null)
+                    if (entries[e] is NullEntry)
                     {
                         bw.Write((uint)0);
                         bw.Write((uint)0);
                     }
                     else
                     {
+                        DataEntry dataEntry = entries[e] as DataEntry;
+
                         bw.Write(offsets[e]);
-                        bw.Write(entries[e].Size);
+                        bw.Write(dataEntry.Size);
                     }
                 }
 
@@ -246,7 +249,7 @@ namespace AFSLib
 
                 for (int e = 0; e < EntryCount; e++)
                 {
-                    if (entries[e] == null)
+                    if (entries[e] is NullEntry)
                     {
                         NotifyProgress?.Invoke(NotificationType.Info, $"Null file... {e + 1}/{EntryCount}");
                     }
@@ -271,7 +274,7 @@ namespace AFSLib
 
                     for (int e = 0; e < EntryCount; e++)
                     {
-                        if (entries[e] == null)
+                        if (entries[e] is NullEntry)
                         {
                             NotifyProgress?.Invoke(NotificationType.Info, $"Null file... {e + 1}/{EntryCount}");
 
@@ -281,17 +284,19 @@ namespace AFSLib
                         {
                             NotifyProgress?.Invoke(NotificationType.Info, $"Writing attribute... {e + 1}/{EntryCount}");
 
-                            byte[] name = Encoding.Default.GetBytes(entries[e].Name);
+                            DataEntry dataEntry = entries[e] as DataEntry;
+
+                            byte[] name = Encoding.Default.GetBytes(dataEntry.Name);
                             outputStream.Write(name, 0, name.Length);
                             outputStream.Position += MAX_ENTRY_NAME_LENGTH - name.Length;
 
-                            bw.Write((ushort)entries[e].LastWriteTime.Year);
-                            bw.Write((ushort)entries[e].LastWriteTime.Month);
-                            bw.Write((ushort)entries[e].LastWriteTime.Day);
-                            bw.Write((ushort)entries[e].LastWriteTime.Hour);
-                            bw.Write((ushort)entries[e].LastWriteTime.Minute);
-                            bw.Write((ushort)entries[e].LastWriteTime.Second);
-                            bw.Write(entries[e].Unknown);
+                            bw.Write((ushort)dataEntry.LastWriteTime.Year);
+                            bw.Write((ushort)dataEntry.LastWriteTime.Month);
+                            bw.Write((ushort)dataEntry.LastWriteTime.Day);
+                            bw.Write((ushort)dataEntry.LastWriteTime.Hour);
+                            bw.Write((ushort)dataEntry.LastWriteTime.Minute);
+                            bw.Write((ushort)dataEntry.LastWriteTime.Second);
+                            bw.Write(dataEntry.Unknown);
                         }
                     }
                 }
@@ -316,7 +321,7 @@ namespace AFSLib
         /// <param name="fileNamePath">Path to the file that will be added.</param>
         /// <param name="entryName">The name of the entry. If null, it will be the name of the file in fileNamePath.</param>
         /// <returns>A reference to the added entry.</returns>
-        public Entry AddEntryFromFile(string fileNamePath, string entryName = null)
+        public FileEntry AddEntryFromFile(string fileNamePath, string entryName = null)
         {
             CheckDisposed();
 
@@ -335,11 +340,11 @@ namespace AFSLib
                 entryName = Path.GetFileName(fileNamePath);
             }
 
-            Entry entry = new FileEntry(fileNamePath, entryName);
-            Internal_AddEntry(entry);
+            FileEntry fileEntry = new FileEntry(fileNamePath, entryName);
+            Internal_AddEntry(fileEntry);
             UpdateSanitizedEntriesNames();
 
-            return entry;
+            return fileEntry;
         }
 
         /// <summary>
@@ -348,7 +353,7 @@ namespace AFSLib
         /// <param name="entryStream">Stream that contains the file that will be added.</param>
         /// <param name="entryName">The name of the entry. If null, it will be considered as string.Empty.</param>
         /// <returns>A reference to the added entry.</returns>
-        public Entry AddEntryFromStream(Stream entryStream, string entryName)
+        public StreamEntry AddEntryFromStream(Stream entryStream, string entryName)
         {
             CheckDisposed();
 
@@ -371,11 +376,26 @@ namespace AFSLib
                 Unknown = (uint)entryStream.Length
             };
 
-            Entry entry = new StreamEntry(entryStream, info);
-            Internal_AddEntry(entry);
+            StreamEntry streamEntry = new StreamEntry(entryStream, info);
+            Internal_AddEntry(streamEntry);
             UpdateSanitizedEntriesNames();
 
-            return entry;
+            return streamEntry;
+        }
+
+        /// <summary>
+        /// Adds a new null entry.
+        /// </summary>
+        /// <returns>A reference to the added entry.</returns>
+        public NullEntry AddNullEntry()
+        {
+            CheckDisposed();
+
+            NullEntry nullEntry = new NullEntry();
+            Internal_AddEntry(nullEntry);
+            UpdateSanitizedEntriesNames();
+
+            return nullEntry;
         }
 
         /// <summary>
@@ -402,7 +422,8 @@ namespace AFSLib
             for (int f = 0; f < files.Length; f++)
             {
                 string entryName = Path.GetFileName(files[f]);
-                Internal_AddEntry(new FileEntry(files[f], entryName));
+                Entry entry = new FileEntry(files[f], entryName);
+                Internal_AddEntry(entry);
             }
 
             UpdateSanitizedEntriesNames();
@@ -442,6 +463,12 @@ namespace AFSLib
                 throw new ArgumentNullException(nameof(entry));
             }
 
+            if (entry is NullEntry)
+            {
+                NotifyProgress?.Invoke(NotificationType.Warning, $"Trying to extract a null entry. Ignored.");
+                return;
+            }
+
             if (string.IsNullOrEmpty(outputFilePath))
             {
                 throw new ArgumentNullException(nameof(outputFilePath));
@@ -461,7 +488,8 @@ namespace AFSLib
 
             if (ContainsAttributes)
             {
-                File.SetLastWriteTime(outputFilePath, entry.LastWriteTime);
+                DataEntry dataEntry = entry as DataEntry;
+                File.SetLastWriteTime(outputFilePath, dataEntry.LastWriteTime);
             }
         }
 
@@ -482,7 +510,7 @@ namespace AFSLib
 
             for (int e = 0; e < EntryCount; e++)
             {
-                if (entries[e] == null)
+                if (entries[e] is NullEntry)
                 {
                     NotifyProgress?.Invoke(NotificationType.Warning, $"Null entry. Skipping... {e + 1}/{EntryCount}");
                     continue;
@@ -490,7 +518,9 @@ namespace AFSLib
 
                 NotifyProgress?.Invoke(NotificationType.Info, $"Extracting entry... {e + 1}/{EntryCount}");
 
-                string outputFilePath = Path.Combine(outputDirectory, entries[e].SanitizedName);
+                DataEntry dataEntry = entries[e] as DataEntry;
+
+                string outputFilePath = Path.Combine(outputDirectory, dataEntry.SanitizedName);
                 if (File.Exists(outputFilePath))
                 {
                     NotifyProgress?.Invoke(NotificationType.Warning, $"File \"{outputFilePath}\" already exists. Overwriting...");
@@ -622,7 +652,9 @@ namespace AFSLib
 
                 for (int e = 0; e < entryCount; e++)
                 {
-                    StreamEntry entry = entriesInfo[e].IsNull ? null : new StreamEntry(afsStream, entriesInfo[e]);
+                    Entry entry;
+                    if (entriesInfo[e].IsNull) entry = new NullEntry();
+                    else entry = new StreamEntry(afsStream, entriesInfo[e]);
                     Internal_AddEntry(entry);
                 }
 
@@ -633,12 +665,22 @@ namespace AFSLib
         private void Internal_AddEntry(Entry entry)
         {
             entries.Add(entry);
-            entry.NameChanged += UpdateSanitizedEntriesNames;
+
+            DataEntry dataEntry = entry as DataEntry;
+            if (dataEntry != null)
+            {
+                dataEntry.NameChanged += UpdateSanitizedEntriesNames;
+            }
         }
 
         private void Internal_RemoveEntry(Entry entry)
         {
-            entry.NameChanged -= UpdateSanitizedEntriesNames;
+            DataEntry dataEntry = entry as DataEntry;
+            if (dataEntry != null)
+            {
+                dataEntry.NameChanged -= UpdateSanitizedEntriesNames;
+            }
+
             entries.Remove(entry);
         }
 
@@ -676,9 +718,11 @@ namespace AFSLib
 
             for (int e = 0; e < EntryCount; e++)
             {
-                if (entries[e] == null) continue;
+                if (entries[e] is NullEntry) continue;
 
-                string sanitizedName = SanitizeName(entries[e].Name);
+                DataEntry dataEntry = entries[e] as DataEntry;
+
+                string sanitizedName = SanitizeName(dataEntry.Name);
 
                 bool found = duplicates.TryGetValue(sanitizedName, out uint duplicateCount);
 
@@ -694,7 +738,7 @@ namespace AFSLib
                     sanitizedName = nameWithoutExtension + nameDuplicate + nameExtension;
                 }
 
-                entries[e].SanitizedName = sanitizedName;
+                dataEntry.SanitizedName = sanitizedName;
             }
         }
 
@@ -704,7 +748,7 @@ namespace AFSLib
             {
                 // The game "Winback 2: Project Poseidon" has attributes with empty file names.
                 // Give the files a dummy name for them to extract properly.
-                return DUMMY_ENTRY_NAME_FOR_BLANK_RAW_NAME;
+                return DUMMY_ENTRY_NAME_FOR_BLANK_NAME;
             }
 
             // There are some cases where instead of a file name, an AFS file will store a path, like in Soul Calibur 2 or Crimson Tears.

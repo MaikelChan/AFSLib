@@ -2,7 +2,7 @@
 
 namespace AFSLib
 {
-    public sealed class StreamEntry : Entry
+    public sealed class StreamEntry : DataEntry
     {
         private readonly Stream baseStream;
         private readonly uint baseStreamDataOffset;

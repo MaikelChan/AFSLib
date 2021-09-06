@@ -2,7 +2,7 @@
 
 namespace AFSLib
 {
-    public sealed class FileEntry : Entry
+    public sealed class FileEntry : DataEntry
     {
         private readonly FileInfo fileInfo;
 
