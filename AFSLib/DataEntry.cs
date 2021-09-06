@@ -64,10 +64,16 @@ namespace AFSLib
         #region Deprecated
 
         /// <summary>
+        /// Sometimes it's the entry size, sometimes not?
+        /// </summary>
+        [Obsolete("This property is deprecated since version 2.0.0, please use the UnknownAttribute property.")]
+        public uint Unknown => UnknownAttribute;
+
+        /// <summary>
         /// Renames an entry.
         /// </summary>
         /// <param name="name">The new name to assign to the entry.</param>
-        [Obsolete("This method is deprecated since version 1.1.0, please use the Name property.")]
+        [Obsolete("This method is deprecated since version 2.0.0, please use the Name property.")]
         public void Rename(string name)
         {
             Name = name;

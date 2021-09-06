@@ -810,7 +810,7 @@ namespace AFSLib
         /// </summary>
         /// <param name="entryName">The name of the entry.</param>
         /// <param name="fileNamePath">Path to the file that will be added.</param>
-        [Obsolete("This method is deprecated since version 1.1.0, please use AddEntryFromFile(string, string) instead.")]
+        [Obsolete("This method is deprecated since version 2.0.0, please use AddEntryFromFile(string, string) instead.")]
         public void AddEntry(string entryName, string fileNamePath)
         {
             AddEntryFromFile(fileNamePath, entryName);
@@ -821,7 +821,7 @@ namespace AFSLib
         /// </summary>
         /// <param name="entryName">The name of the entry.</param>
         /// <param name="entryStream">Stream that contains the file that will be added.</param>
-        [Obsolete("This method is deprecated since version 1.1.0, please use AddEntryFromStream(Stream, string) instead.")]
+        [Obsolete("This method is deprecated since version 2.0.0, please use AddEntryFromStream(Stream, string) instead.")]
         public void AddEntry(string entryName, Stream entryStream)
         {
             AddEntryFromStream(entryStream, entryName);
@@ -832,7 +832,7 @@ namespace AFSLib
         /// </summary>
         /// <param name="entry">The entry to extract.</param>
         /// <param name="outputFilePath">The path to the file where the entry will be saved. If it doesn't exist, it will be created.</param>
-        [Obsolete("This method is deprecated since version 1.1.0, please use ExtractEntryToFile(Entry, string) instead.")]
+        [Obsolete("This method is deprecated since version 2.0.0, please use ExtractEntryToFile(Entry, string) instead.")]
         public void ExtractEntry(Entry entry, string outputFilePath)
         {
             ExtractEntryToFile(entry, outputFilePath);
@@ -842,7 +842,7 @@ namespace AFSLib
         /// Extracts all the entries from the AFS object.
         /// </summary>
         /// <param name="outputDirectory">The directory where the entries will be saved. If it doesn't exist, it will be created.</param>
-        [Obsolete("This method is deprecated since version 1.1.0, please use ExtractAllEntriesToDirectory(string) instead.")]
+        [Obsolete("This method is deprecated since version 2.0.0, please use ExtractAllEntriesToDirectory(string) instead.")]
         public void ExtractAllEntries(string outputDirectory)
         {
             ExtractAllEntriesToDirectory(outputDirectory);
