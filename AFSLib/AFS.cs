@@ -498,7 +498,16 @@ namespace AFSLib
             if (ContainsAttributes)
             {
                 DataEntry dataEntry = entry as DataEntry;
-                File.SetLastWriteTime(outputFilePath, dataEntry.LastWriteTime);
+
+                try
+                {
+                    File.SetLastWriteTime(outputFilePath, dataEntry.LastWriteTime);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    File.SetLastWriteTime(outputFilePath, DateTime.Now);
+                    NotifyProgress?.Invoke(NotificationType.Warning, "Invalid date/time. Setting current date/time.");
+                }
             }
         }
 
@@ -644,7 +653,17 @@ namespace AFSLib
                             afsStream.Read(name, 0, name.Length);
 
                             entriesInfo[e].Name = Utils.GetStringFromBytes(name);
-                            entriesInfo[e].LastWriteTime = new DateTime(br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16());
+
+                            try
+                            {
+                                entriesInfo[e].LastWriteTime = new DateTime(br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16(), br.ReadUInt16());
+                            }
+                            catch (ArgumentOutOfRangeException)
+                            {
+                                entriesInfo[e].LastWriteTime = default;
+                                NotifyProgress?.Invoke(NotificationType.Warning, "Invalid date/time. Ignoring.");
+                            }
+
                             entriesInfo[e].UnknownAttribute = br.ReadUInt32();
                         }
                     }
