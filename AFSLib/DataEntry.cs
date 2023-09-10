@@ -57,8 +57,7 @@ namespace AFSLib
         public uint CustomData { get; set; }
 
         /// <summary>
-        /// In old AFS archives CustomData usually contains the entry size, but in later versions it contains custom developer data.
-        /// This returns true if it contains the size.
+        /// Returns true if CustomData contains the entry size.
         /// </summary>
         public bool CustomDataContainsSize => CustomData == Size;
 
