@@ -44,6 +44,13 @@ namespace AFSLib
         public bool ContainsAttributes => AttributesInfoType != AttributesInfoType.NoAttributes;
 
         /// <summary>
+        /// Returns true if all attributes contain the size of the entry.
+        /// Some AFS archives contain each entry's size in their attributes, while others contain custom developer data.
+        /// To access this data use the CustomData property of the Entry.
+        /// </summary>
+        public bool AllAttributesContainEntrySize => DoAllAttributesContainEntrySize();
+
+        /// <summary>
         /// Event that will be called each time some process wants to report something.
         /// </summary>
         public event NotifyProgressDelegate NotifyProgress;
@@ -725,7 +732,23 @@ namespace AFSLib
             if (attributesOffset < dataBlockEndOffset) return false;
             if (attributesOffset > afsFileSize - attributesSize) return false;
 
-            // If the above conditions are not met, it looks like it's valid attribute data
+            // If the above conditions are not met, it looks like it's valid attribute info
+            return true;
+        }
+
+        private bool DoAllAttributesContainEntrySize()
+        {
+            if (!ContainsAttributes) return false;
+
+            for (int e = 0; e < EntryCount; e++)
+            {
+                if (entries[e] is NullEntry) continue;
+
+                DataEntry dataEntry = entries[e] as DataEntry;
+
+                if (!dataEntry.CustomDataContainsSize) return false;
+            }
+
             return true;
         }
 
