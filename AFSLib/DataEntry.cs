@@ -52,15 +52,15 @@ namespace AFSLib
         public DateTime LastWriteTime { get; set; }
 
         /// <summary>
-        /// In many AFS archives this contains the entry size, but some of them contain some unknown values.
+        /// In old AFS archives this usually contains the entry size, but in later versions it contains custom developer data.
         /// </summary>
-        public uint UnknownAttribute { get; set; }
+        public uint CustomData { get; set; }
 
         /// <summary>
-        /// Usually, UnknownAttribute will contain the same value as Size, but sometimes it will contain a different unknown value.
-        /// This returns true if it's the later.
+        /// In old AFS archives CustomData usually contains the entry size, but in later versions it contains custom developer data.
+        /// This returns true if it contains the size.
         /// </summary>
-        public bool HasUnknownAttribute => Size != UnknownAttribute;
+        public bool CustomDataContainsSize => CustomData == Size;
 
         internal event Action NameChanged;
 
@@ -81,6 +81,23 @@ namespace AFSLib
         {
             Name = name;
         }
+
+        /// <summary>
+        /// In many AFS archives this contains the entry size, but some of them contain some unknown values.
+        /// </summary>
+        [Obsolete("This property is deprecated since version 2.0.3, please use the CustomData property.")]
+        public uint UnknownAttribute
+        {
+            get => CustomData;
+            set => CustomData = value;
+        }
+
+        /// <summary>
+        /// Usually, UnknownAttribute will contain the same value as Size, but sometimes it will contain a different unknown value.
+        /// This returns true if it's the later.
+        /// </summary>
+        [Obsolete("This property is deprecated since version 2.0.3, please use CustomDataIsSize.")]
+        public bool HasUnknownAttribute => !CustomDataContainsSize;
 
         #endregion
     }

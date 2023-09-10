@@ -305,7 +305,7 @@ namespace AFSLib
                             bw.Write((ushort)dataEntry.LastWriteTime.Hour);
                             bw.Write((ushort)dataEntry.LastWriteTime.Minute);
                             bw.Write((ushort)dataEntry.LastWriteTime.Second);
-                            bw.Write(dataEntry.UnknownAttribute);
+                            bw.Write(dataEntry.CustomData);
                         }
                     }
                 }
@@ -382,7 +382,7 @@ namespace AFSLib
                 Name = entryName,
                 Size = (uint)entryStream.Length,
                 LastWriteTime = DateTime.Now,
-                UnknownAttribute = (uint)entryStream.Length
+                CustomData = (uint)entryStream.Length
             };
 
             StreamEntry streamEntry = new StreamEntry(entryStream, info);
@@ -664,7 +664,7 @@ namespace AFSLib
                                 NotifyProgress?.Invoke(NotificationType.Warning, "Invalid date/time. Ignoring.");
                             }
 
-                            entriesInfo[e].UnknownAttribute = br.ReadUInt32();
+                            entriesInfo[e].CustomData = br.ReadUInt32();
                         }
                     }
                 }

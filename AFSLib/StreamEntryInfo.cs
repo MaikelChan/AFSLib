@@ -8,7 +8,7 @@ namespace AFSLib
         public string Name;
         public uint Size;
         public DateTime LastWriteTime;
-        public uint UnknownAttribute;
+        public uint CustomData;
 
         public bool IsNull => Offset == 0;
     }
