@@ -5,10 +5,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Authors>MaikelChan</Authors>
     <Description>AFSLib is a library that can extract, create and manipulate AFS files. The AFS format is used in many games from companies like Sega.</Description>
-    <AssemblyVersion>2.0.2.0</AssemblyVersion>
-    <FileVersion>2.0.2.0</FileVersion>
-    <Version>2.0.2</Version>
-    <Company />
+    <Version>2.0.3</Version>
     <PackageProjectUrl>https://github.com/MaikelChan/AFSLib</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MaikelChan/AFSLib</RepositoryUrl>
     <PackageTags>games, game, packer, unpacker, romhacking, rom, afs, afs-archive</PackageTags>

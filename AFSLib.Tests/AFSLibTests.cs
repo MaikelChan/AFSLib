@@ -39,7 +39,7 @@ namespace AFSLib.Tests
                     uint entryBlockAlignment;
                     string[] entriesNames;
                     string[] entriesSanitizedNames;
-                    uint[] entriesUnknownAttributes;
+                    uint[] entriesCustomData;
 
                     using (FileStream stream1 = File.OpenRead(filePath1))
                     {
@@ -53,7 +53,7 @@ namespace AFSLib.Tests
                         entryBlockAlignment = afs1.EntryBlockAlignment;
                         entriesNames = new string[afs1.Entries.Count];
                         entriesSanitizedNames = new string[afs1.Entries.Count];
-                        entriesUnknownAttributes = new uint[afs1.Entries.Count];
+                        entriesCustomData = new uint[afs1.Entries.Count];
 
                         for (int e = 0; e < entriesSanitizedNames.Length; e++)
                         {
@@ -61,7 +61,7 @@ namespace AFSLib.Tests
                             {
                                 entriesNames[e] = null;
                                 entriesSanitizedNames[e] = null;
-                                entriesUnknownAttributes[e] = 0;
+                                entriesCustomData[e] = 0;
                             }
                             else
                             {
@@ -69,7 +69,7 @@ namespace AFSLib.Tests
 
                                 entriesNames[e] = dataEntry.Name;
                                 entriesSanitizedNames[e] = dataEntry.SanitizedName;
-                                entriesUnknownAttributes[e] = dataEntry.UnknownAttribute;
+                                entriesCustomData[e] = dataEntry.CustomData;
                             }
                         }
 
@@ -91,7 +91,7 @@ namespace AFSLib.Tests
                             else
                             {
                                 FileEntry fileEntry = afs2.AddEntryFromFile(Path.Combine(extractionDirectory, entriesSanitizedNames[e]), entriesNames[e]);
-                                fileEntry.UnknownAttribute = entriesUnknownAttributes[e];
+                                fileEntry.CustomData = entriesCustomData[e];
                             }
                         }
 
@@ -111,7 +111,7 @@ namespace AFSLib.Tests
             }
         }
 
-        bool CompareHashes(byte[] hash1, byte[] hash2)
+        static bool CompareHashes(byte[] hash1, byte[] hash2)
         {
             if (hash1.Length != hash2.Length) return false;
 
