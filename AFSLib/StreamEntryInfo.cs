@@ -10,6 +10,6 @@ namespace AFSLib
         public DateTime LastWriteTime;
         public uint UnknownAttribute;
 
-        public bool IsNull => Offset == 0 || Size == 0;
+        public bool IsNull => Offset == 0;
     }
 }

@@ -15,6 +15,7 @@ namespace AFSLib.Tests
             //"ADX_USA.AFS",    // Dragon Ball Z Budokai 3 (Fails due to having an uint indicating the size of the whole AFS file. No other AFS has this. Rest is ok)
             "AREA50.AFS",       // Winback 2: Project Poseidon
             "btl_voice.afs",    // Arc Rise Fantasia
+            //"DVD000.AFS",     // Urban Reign (PS2) (Fails due to adding missind dates)
             "movie.afs",        // Soul Calibur 2 (PS2)
             "mry.afs"           // Resident Evil: Code Veronica (GameCube)
         };

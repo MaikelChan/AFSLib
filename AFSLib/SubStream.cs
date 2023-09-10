@@ -76,7 +76,7 @@ namespace AFSLib
                 CheckDisposed();
 
                 if (value < 0) throw new ArgumentOutOfRangeException(nameof(value));
-                if (value >= length) throw new ArgumentOutOfRangeException(nameof(value));
+                if (value > length) throw new ArgumentOutOfRangeException(nameof(value));
                 baseStream.Position = origin + value;
             }
         }
