@@ -334,29 +334,29 @@ namespace AFSLib
         /// <summary>
         /// Adds a new entry from a file.
         /// </summary>
-        /// <param name="fileNamePath">Path to the file that will be added.</param>
+        /// <param name="filePath">Path to the file that will be added.</param>
         /// <param name="entryName">The name of the entry. If null, it will be the name of the file in fileNamePath.</param>
         /// <returns>A reference to the added entry.</returns>
-        public FileEntry AddEntryFromFile(string fileNamePath, string entryName = null)
+        public FileEntry AddEntryFromFile(string filePath, string entryName = null)
         {
             CheckDisposed();
 
-            if (string.IsNullOrEmpty(fileNamePath))
+            if (string.IsNullOrEmpty(filePath))
             {
-                throw new ArgumentNullException(nameof(fileNamePath));
+                throw new ArgumentNullException(nameof(filePath));
             }
 
-            if (!File.Exists(fileNamePath))
+            if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException($"File \"{fileNamePath}\" has not been found.", fileNamePath);
+                throw new FileNotFoundException($"File \"{filePath}\" has not been found.", filePath);
             }
 
             if (entryName == null)
             {
-                entryName = Path.GetFileName(fileNamePath);
+                entryName = Path.GetFileName(filePath);
             }
 
-            FileEntry fileEntry = new FileEntry(fileNamePath, entryName);
+            FileEntry fileEntry = new FileEntry(filePath, entryName);
             Internal_AddEntry(fileEntry);
             UpdateSanitizedEntriesNames();
 
